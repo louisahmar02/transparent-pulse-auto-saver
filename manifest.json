@@ -1,17 +1,17 @@
 {
   "manifest_version": 3,
   "name": "Transparent Pulse Auto Saver",
-  "version": "1.2",
-  "description": "Auto downloads Transparent Pulse certificates and uploads them directly to Google Drive.",
+  "version": "1.0",
+  "description": "Auto downloads Transparent Pulse certificates and syncs them directly to Google Drive.",
   "permissions": [
     "tabs",
     "activeTab",
     "identity",
-    "storage",
-    "downloads"
+    "storage"
   ],
   "host_permissions": [
-    "<all_urls>"
+    "https://pulse.transparent.com/*",
+    "https://www.googleapis.com/*"
   ],
   "action": {
     "default_popup": "popup.html"
