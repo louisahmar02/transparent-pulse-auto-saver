@@ -3,7 +3,7 @@
 // ============================================================================
 
 (function() {
-  // Intercept URL.createObjectURL (Captures dynamically generated Blobs/PDFs)
+  // Intercept URL.createObjectURL (Captures generated Blobs/PDFs)
   const originalCreateObjectURL = URL.createObjectURL;
   URL.createObjectURL = function(blob) {
     const url = originalCreateObjectURL.apply(this, arguments);
@@ -21,7 +21,7 @@
     return url;
   };
 
-  // Intercept Anchor Clicks (Captures direct download triggers)
+  // Intercept Anchor Clicks (Captures direct link triggers)
   const originalClick = HTMLAnchorElement.prototype.click;
   HTMLAnchorElement.prototype.click = function() {
     if (this.href) {
