@@ -1,124 +1,64 @@
 // ============================================================================
-// Pulse Auto-Saver: Background Service Worker (Full-Page Capture & Upload)
+// Pulse Auto-Saver: Background Service Worker (GitHub Upload)
 // ============================================================================
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === "capture_and_upload") {
-    const tabId = sender.tab ? sender.tab.id : null;
-    if (tabId) {
-      handleCaptureAndUpload(request.folderId, tabId);
-    } else {
-      console.error("🔴 [Background] Could not identify target tab ID.");
-    }
+  if (request.action === "upload_base64_file") {
+    handleGitHubUpload(request.base64Data, request.fileName);
   }
 });
 
-async function handleCaptureAndUpload(folderId, tabId) {
+async function handleGitHubUpload(base64Data, fileName) {
   try {
-    console.log("🟢 [Background] Fetching Google Auth Token...");
-    const token = await getAuthToken();
+    console.log("🟢 [Background] Receiving file for GitHub upload...");
 
-    console.log("🟢 [Background] Capturing Full-Page Screenshot...");
-    const dataUrl = await captureFullPageScreenshot(tabId);
+    // Fetch user settings stored in chrome.storage
+    const config = await chrome.storage.sync.get([
+      "githubToken",
+      "githubRepo",  // e.g., "username/repository"
+      "githubPath"   // e.g., "certificates" or leave empty for root
+    ]);
 
-    console.log("🟢 [Background] Converting Image Data...");
-    const blob = dataUrlToBlob(dataUrl);
-    const fileName = `Pulse_Test_${new Date().toISOString().replace(/:/g, '-')}.png`;
+    const token = config.githubToken;
+    const repo = config.githubRepo; // Expected format: "username/repo"
+    const folderPath = config.githubPath ? config.githubPath.replace(/^\/|\/$/g, "") : "";
 
-    console.log("🟢 [Background] Uploading to Google Drive...");
-    const result = await uploadToDrive(token, blob, fileName, folderId);
-    
-    console.log("🟢 [Background] SUCCESS! Full-page screenshot uploaded to Drive:", result);
+    if (!token || !repo) {
+      console.error("🔴 [Background] GitHub credentials missing! Please configure Popup/Options.");
+      return;
+    }
+
+    // Clean Base64 string (GitHub API requires raw base64 without the 'data:...;base64,' prefix)
+    const rawBase64 = base64Data.includes(",") ? base64Data.split(",")[1] : base64Data;
+
+    // Construct target file path inside the repository
+    const targetPath = folderPath ? `${folderPath}/${fileName}` : fileName;
+    const apiUrl = `https://api.github.com/repos/${repo}/contents/${targetPath}`;
+
+    console.log(`🟢 [Background] Uploading to GitHub repo (${repo}) at path: ${targetPath}`);
+
+    const response = await fetch(apiUrl, {
+      method: "PUT",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Accept": "application/vnd.github+json",
+        "Content-Type": "application/json",
+        "X-GitHub-Api-Version": "2022-11-28"
+      },
+      body: JSON.stringify({
+        message: `Auto-saved certificate: ${fileName}`,
+        content: rawBase64
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`GitHub API error (${response.status}): ${errorData.message}`);
+    }
+
+    const result = await response.json();
+    console.log("🟢 [Background] SUCCESS! File committed to GitHub:", result.content.html_url);
   } catch (err) {
-    const errorDetails = err?.message || JSON.stringify(err);
-    console.error("🔴 [Background] Upload Process Failed:", errorDetails);
+    console.error("🔴 [Background] GitHub upload failed:", err?.message || err);
   }
-}
-
-/**
- * Captures full scrollable vertical height using Chrome DevTools Protocol
- */
-function captureFullPageScreenshot(tabId) {
-  return new Promise((resolve, reject) => {
-    const target = { tabId: tabId };
-
-    chrome.debugger.attach(target, "1.3", () => {
-      if (chrome.runtime.lastError) {
-        return reject(new Error(chrome.runtime.lastError.message));
-      }
-
-      chrome.debugger.sendCommand(
-        target,
-        "Page.captureScreenshot",
-        { format: "png", captureBeyondViewport: true },
-        (result) => {
-          const err = chrome.runtime.lastError;
-          chrome.debugger.detach(target, () => {
-            if (err) {
-              return reject(new Error(err.message));
-            }
-            if (result && result.data) {
-              resolve("data:image/png;base64," + result.data);
-            } else {
-              reject(new Error("Failed to capture full-page screenshot data."));
-            }
-          });
-        }
-      );
-    });
-  });
-}
-
-function getAuthToken() {
-  return new Promise((resolve, reject) => {
-    chrome.identity.getAuthToken({ interactive: true }, (token) => {
-      if (chrome.runtime.lastError || !token) {
-        chrome.identity.clearAllCachedAuthTokens(() => {
-          const msg = chrome.runtime.lastError ? chrome.runtime.lastError.message : "Failed to get token";
-          reject(new Error(msg));
-        });
-      } else {
-        resolve(token);
-      }
-    });
-  });
-}
-
-function dataUrlToBlob(dataUrl) {
-  const arr = dataUrl.split(',');
-  const mime = arr[0].match(/:(.*?);/)[1];
-  const bstr = atob(arr[1]);
-  let n = bstr.length;
-  const u8arr = new Uint8Array(n);
-  while (n--) {
-    u8arr[n] = bstr.charCodeAt(n);
-  }
-  return new Blob([u8arr], { type: mime });
-}
-
-async function uploadToDrive(token, blob, fileName, folderId) {
-  const metadata = {
-    name: fileName,
-    mimeType: 'image/png',
-    parents: folderId ? [folderId] : []
-  };
-
-  const formData = new FormData();
-  formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-  formData.append('file', blob);
-
-  const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`
-    },
-    body: formData
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Google Drive API error (${response.status}): ${errorText}`);
-  }
-
-  return await response.json();
 }
