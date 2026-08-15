@@ -1,37 +1,31 @@
-# Transparent Pulse Auto-Saver 📸
+# 🎓 Transparent Pulse Auto-Saver
 
-An automated Chrome Extension (Manifest V3) that captures full-page vertical screenshots of Transparent Pulse test results and automatically uploads them to Google Drive.
+An automated Chrome Extension (Manifest V3) that detects completed test scorecards on Transparent Pulse, intercepts generated PDF certificates, and automatically syncs them directly to Google Drive.
 
-## Features
-- **Automatic Detection:** Automatically triggers when test results (`.score`, `mln-result-chart`) render on the screen.
-- **Full-Page Screenshot:** Captures the full vertical height of the score card using Chrome DevTools Protocol.
-- **Custom Destination:** Users can save screenshots to any Google Drive folder ID using the popup UI.
+---
 
-## Installation Instructions
+## 🚀 Features
+- **CSP Bypass:** Runs a main-world script interceptor to catch dynamically created PDF blobs without violating strict site security policies.
+- **Automated Trigger:** Automatically detects score completion and triggers certificate download.
+- **Google Drive Sync:** Direct upload to Google Drive via OAuth2 & Google Drive API v3.
 
-1. Clone or download this repository as a ZIP.
-2. Open Chrome and go to `chrome://extensions`.
-3. Enable **Developer mode** in the top-right corner.
-4. Click **Load unpacked** and select the project folder.
-5. In `chrome://extensions`, click **Details** on the extension card and set **Site access** to **On all sites**.
+---
 
+## 🛠️ How to Install in Chrome
 
-## 🔧 Technologies Used
-- Chrome Extension Manifest V3
-- Google Drive API v3
-- Chrome Debugger Protocol
-- JavaScript (ES6)
+1. **Download Code:** Click the green **`<Code>`** button above and select **Download ZIP**.
+2. **Extract ZIP:** Unzip the downloaded file to a folder on your computer.
+3. **Open Chrome Extensions:** Go to `chrome://extensions/` in your browser.
+4. **Enable Developer Mode:** Turn on the **Developer mode** toggle in the top-right corner.
+5. **Load Extension:** Click **Load unpacked** (top-left) and select the extracted folder.
 
-## 🚀 Future Improvements
-- [ ] Support for multiple test result formats
-- [ ] Option to auto-create Google Drive folder
-- [ ] Notification system for upload status
+---
 
-## 🤝 Contributing
-Pull requests are welcome! For major changes, please open an issue first.
+## 📁 Optional: Set a Target Google Drive Folder
 
-## 📝 License
-[MIT](https://choosealicense.com/licenses/mit/)
+By default, certificates are saved directly to the root directory of your Google Drive. To save them into a specific folder:
 
-## ⚠️ Disclaimer
-This extension is not affiliated with or endorsed by Transparent.com. Use at your own discretion.
+1. Open your Google Drive folder and copy the Folder ID from the URL (e.g., `1a2b3c4d5e...` from `drive.google.com/drive/folders/1a2b3c4d5e...`).
+2. Go to `chrome://extensions`, click **Inspect views: service worker** under this extension, open the **Console** tab, and run:
+   ```javascript
+   chrome.storage.sync.set({ driveFolderId: "YOUR_FOLDER_ID_HERE" });
