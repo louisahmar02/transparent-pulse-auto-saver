@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "Transparent Pulse Auto Saver",
+  "version": "1.0",
+  "description": "Auto saves Transparent Pulse test results directly to your Google Drive as full-page screenshots.",
+  "permissions": [
+    "tabs",
+    "activeTab",
+    "identity",
+    "storage",
+    "debugger"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://pulse.transparent.com/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "oauth2": {
+    "client_id": "1072452899972-l1j2g58kjpp85d2m0svvj31ornhv9fq1.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/drive.file"
+    ]
+  }
+}
